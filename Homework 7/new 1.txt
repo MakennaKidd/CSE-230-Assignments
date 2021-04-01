@@ -1,0 +1,97 @@
+data
+        inputMsg: .asciiz "Enter an integer:\n"
+       outputMsg: .asciiz "The solution is: \n"
+         newline: .asciiz "\n"
+.text
+.globl main
+
+main:
+        # print the input msg
+        la $a0, inputMsg
+        li $v0, 4
+        syscall
+        
+        # read the integer from user
+        li $v0, 5
+        syscall
+        
+        # move the value read from $v0 to $a0, to pass it to function
+        add $a0, $zero, $v0
+        
+        # call the function
+        jal function1
+        
+        # assign thte value returned from function1 to $t0
+        add $t0, $zero, $v0
+        
+        # print the output msg
+        la $a0, outputMsg
+        li $v0, 4
+        syscall
+        
+        # print the returned value
+        add $a0, $zero, $t0
+        li $v0, 1
+        syscall
+        
+        # print the newline
+        la $a0, newline
+        li $v0, 4
+        syscall
+        
+        # terminate the program
+        li $v0, 10
+        syscall
+        
+# function1
+function1:
+        # if n > 4, then recurse
+        bgt $a0, 4, rec
+        # else
+        addi $t0, $zero, 7      # $t0 = 7
+        addi $t1, $zero, 11     # $t1 = 11
+        div $a0, $t0            # n/7
+        mfhi $a0                # n%7
+        sub $a0, $a0, 11        # n%7 - 11
+        # move the result to $v0
+        add $v0, $zero, $a0
+        # return
+        jr $ra
+        # recursive call
+        rec:
+                # adjust the stack to store three registers
+                sub $sp, $sp, 12
+                # store the first two registers to the stack
+                sw $ra, 0($sp)  # store the return address
+                sw $a0, 4($sp)  # store the value of n
+                
+                addi $a0, $a0, -2       # n-2
+                # call function1(n-2)
+                jal function1
+                # store the value returned by function1(n-2)
+                sw $v0, 8($sp)  
+                
+                # load the value of $a0
+                lw $a0, 4($sp)
+                addi $a0, $a0, -4       # n-4
+                jal function1
+                
+                lw $t0, 8($sp)          # $t0 = function1(n-2)
+                add $t1, $zero, $v0     # $t1 = function1(n-4)
+                addi $t2, $zero, 5      # $t2 = 5
+                # $t4 = n
+                lw $t4, 4($sp)
+                mul $t0, $t0, $t4       # $t0 = function1(n-2)*n
+                mul $t1, $t1, $t4       # $t1 = function1(n-4)*n
+                mul $t2, $t2, $t4       # $t2 = 5*n
+                
+                # prepare the ans
+                add $v0, $zero, $t0
+                sub $v0, $v0, $t1
+                sub $v0, $v0, $t2
+                
+                # load the return address
+                lw $ra, 0($sp)
+                # adjust the stack
+                addi $sp, $sp, 12
+                jr $ra
